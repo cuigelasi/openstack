@@ -1,0 +1,51 @@
+---
+
+- hosts: bs
+  tasks:
+  - name: 安装控制节点相关包
+    shell: yum clean all;
+           yum -y update
+  - name: 安装expect
+    shell: yum -y install expect
+  - name: 安装haproxy
+    shell: yum -y install haproxy;
+  - name: 安装python-openstackclient，openstack-selinux
+    shell: yum -y install python-openstackclient openstack-selinux;
+  - name: 安装MariaDB-server MariaDB-client python2-PyMySQL
+    shell: yum -y install MariaDB-server MariaDB-client python2-PyMySQL
+  - name: 安装rabbitmq-server
+    shell: yum -y install rabbitmq-server
+  - name: 安装memcached python-memcached
+    shell: yum -y install memcached python-memcached
+  - name: 安装openstack-keystone httpd mod_wsgi
+    shell: yum -y install openstack-keystone httpd mod_wsgi
+  - name: 安装openstack-glance
+    shell: yum -y install openstack-glance
+  - name: 安装openstack-nova-api openstack-nova-conductor openstack-nova-console openstack-nova-scheduler
+    shell: yum -y install openstack-nova-api openstack-nova-conductor openstack-nova-console openstack-nova-scheduler
+  - name: 安装spice-html5 openstack-nova-spicehtml5proxy spice-server
+    shell: yum -y install spice-html5 openstack-nova-spicehtml5proxy spice-server
+  - name: 安装openstack-neutron openstack-neutron-ml2 openstack-neutron-openvswitch
+    shell: yum -y install openstack-neutron openstack-neutron-ml2 openstack-neutron-openvswitch
+  - name: 安装openstack-dashboard
+    shell: yum -y install openstack-dashboard
+  - name: 安装openstack-cinder targetcli python-keystone
+    shell: yum -y install openstack-cinder targetcli python-keystone
+  - name: 安装pacemaker pcs corosync fence-agents resource-agents xinetd
+    shell: yum -y install pacemaker pcs corosync fence-agents resource-agents xinetd;
+           yum install ansible -y;
+           systemctl disable mariadb.service
+
+- hosts: compute
+  tasks:
+  - name: 安装计算节点相关的包
+    shell: yum clean all;
+           yum -y update;
+  - name: 安装python-openstackclient openstack-selinux
+    shell: yum -y install python-openstackclient openstack-selinux
+  - name: 安装openstack-nova-compute spice-html5 spice-server
+    shell: yum -y install openstack-nova-compute spice-html5 spice-server
+  - name: 安装openstack-neutron-openvswitch
+    shell: yum -y install openstack-neutron-openvswitch
+  - name: 安装device-mapper-multipath
+    shell: yum -y install device-mapper-multipath

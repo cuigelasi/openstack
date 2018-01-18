@@ -1,0 +1,50 @@
+---
+
+- hosts: controller
+  tasks:
+  - name: 配置本地源
+    shell: mkdir /root/repo-backup;
+           mv /etc/yum.repos.d/* /root/repo-backup/
+  - name: 复制Local-Yum.repo
+    copy: src="/root/con_sta/conf/Local-Yum.repo" dest="/etc/yum.repos.d"
+  - name: 复制local_yum.zip
+    copy: src="/root/con_sta/local_yum.zip" dest="/root/local_yum.zip"
+  - name: 复制controller.zip
+    copy: src="/root/con_sta/controller.zip" dest="/root/controller.zip"
+  - name: 解压
+    shell: unzip controller.zip;
+           unzip local_yum.zip;
+           yum clean all
+           
+- hosts: standby
+  tasks:
+  - name: 配置本地源
+    shell: mkdir /root/repo-backup;
+           mv /etc/yum.repos.d/* /root/repo-backup/
+  - name: 复制Local-Yum.repo
+    copy: src="/root/con_sta/conf/Local-Yum.repo" dest="/etc/yum.repos.d"
+  - name: 复制local_yum.zip
+    copy: src="/root/con_sta/local_yum.zip" dest="/root/local_yum.zip"
+  - name: 复制controller.zip
+    copy: src="/root/con_sta/standby.zip" dest="/root/standby.zip"
+  - name: 解压
+    shell: unzip standby.zip;
+           unzip local_yum.zip;
+           yum clean all
+
+- hosts: compute
+  tasks:
+  - name: 配置本地源
+    shell: mkdir /root/repo-backup;
+           mv /etc/yum.repos.d/* /root/repo-backup/
+  - name: 复制Local-Yum.repo
+    copy: src="/root/con_sta/conf/Local-Yum.repo" dest="/etc/yum.repos.d"
+  - name: 复制compute.zip
+    copy: src="/root/con_sta/compute.zip" dest="/root/compute.zip"
+  - name: 复制local_yum.zip
+    copy: src="/root/con_sta/local_yum.zip" dest="/root/local_yum.zip"
+  - name: 解压
+    shell: unzip /root/compute.zip;
+           unzip /root/local_yum.zip;
+           yum clean all
+

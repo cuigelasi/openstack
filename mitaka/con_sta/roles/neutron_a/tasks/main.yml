@@ -1,0 +1,103 @@
+---
+
+- name: 导入neutron数据库
+  shell: mysql -uroot -p{{DB_PASS}}< {{MAJOR_CONF_PATH}}/neutron/neutron.sql
+- name: 创建 neutron 用户,创建三种接口类型,创建服务
+  shell: bash -login -c 'source /home/admin-openrc.sh;
+         openstack user create --domain default --password NEUTRON_PASS neutron;
+         openstack role add --project service --user neutron admin;
+         openstack service create --name neutron --description "OpenStack Networking" network;
+         openstack endpoint create --region RegionOne network public http://{{CONTROLLER_VIP}}:9696;
+         openstack endpoint create --region RegionOne network internal http://{{CONTROLLER_VIP}}:9696;
+         openstack endpoint create --region RegionOne network admin http://{{CONTROLLER_VIP}}:9696'
+- name: 配置neutron.conf
+  shell: crudini --set /etc/neutron/neutron.conf database connection "mysql+pymysql://neutron:NEUTRON_DBPASS@{{MAJOR_IP}}/neutron";
+         crudini --set /etc/neutron/neutron.conf database slave_connection "mysql+pymysql://neutron:NEUTRON_DBPASS@{{STANDBY_IP}}/neutron";
+         crudini --set /etc/neutron/neutron.conf DEFAULT core_plugin ml2;
+         crudini --set /etc/neutron/neutron.conf DEFAULT service_plugins router;
+         crudini --set /etc/neutron/neutron.conf DEFAULT allow_overlapping_ips True;
+         crudini --set /etc/neutron/neutron.conf DEFAULT transport_url rabbit://openstack:RABBIT_PASS@{{MAJOR_IP}}:5672,openstack:RABBIT_PASS@{{STANDBY_IP}}:5672;
+         crudini --set /etc/neutron/neutron.conf DEFAULT auth_strategy keystone;crudini --set /etc/neutron/neutron.conf keystone_authtoken auth_uri "http://{{CONTROLLER_VIP}}:5000";
+         crudini --set /etc/neutron/neutron.conf keystone_authtoken auth_url "http://{{CONTROLLER_VIP}}:35357";
+         crudini --set /etc/neutron/neutron.conf keystone_authtoken memcached_servers "{{MAJOR_IP}}:11211,{{STANDBY_IP}}:11211";
+         crudini --set /etc/neutron/neutron.conf keystone_authtoken auth_type password;crudini --set /etc/neutron/neutron.conf keystone_authtoken project_domain_name default;
+         crudini --set /etc/neutron/neutron.conf keystone_authtoken user_domain_name default;
+         crudini --set /etc/neutron/neutron.conf keystone_authtoken project_name service;
+         crudini --set /etc/neutron/neutron.conf keystone_authtoken username neutron;
+         crudini --set /etc/neutron/neutron.conf keystone_authtoken password NEUTRON_PASS;
+         crudini --set /etc/neutron/neutron.conf DEFAULT notify_nova_on_port_status_changes True;
+         crudini --set /etc/neutron/neutron.conf DEFAULT notify_nova_on_port_data_changes True;
+         crudini --set /etc/neutron/neutron.conf nova auth_url "http://{{CONTROLLER_VIP}}:35357";
+         crudini --set /etc/neutron/neutron.conf nova auth_type password;
+         crudini --set /etc/neutron/neutron.conf nova project_domain_name default;
+         crudini --set /etc/neutron/neutron.conf nova user_domain_name default;
+         crudini --set /etc/neutron/neutron.conf nova region_name RegionOne;
+         crudini --set /etc/neutron/neutron.conf nova project_name service;
+         crudini --set /etc/neutron/neutron.conf nova username nova;
+         crudini --set /etc/neutron/neutron.conf nova password NOVA_PASS;
+         crudini --set /etc/neutron/neutron.conf oslo_concurrency lock_path /var/lib/neutron/tmp;
+         crudini --set /etc/neutron/neutron.conf DEFAULT bind_host {{MAJOR_IP}};
+         crudini --set /etc/neutron/neutron.conf DEFAULT dhcp_agents_per_network 2;
+         crudini --set /etc/neutron/neutron.conf DEFAULT l3_ha True;
+         crudini --set /etc/neutron/neutron.conf DEFAULT allow_automatic_l3agent_failover True;
+         crudini --set /etc/neutron/neutron.conf DEFAULT max_l3_agents_per_router 2;
+         crudini --set /etc/neutron/neutron.conf DEFAULT min_l3_agents_per_router 2;
+- name: 配置ml2_conf.ini
+  shell: crudini --set /etc/neutron/plugins/ml2/ml2_conf.ini ml2 type_drivers "flat,vxlan";
+         crudini --set /etc/neutron/plugins/ml2/ml2_conf.ini ml2 tenant_network_types vxlan;
+         crudini --set /etc/neutron/plugins/ml2/ml2_conf.ini ml2 mechanism_drivers "openvswitch,l2population";
+         crudini --set /etc/neutron/plugins/ml2/ml2_conf.ini ml2 extension_drivers port_security;
+         crudini --set /etc/neutron/plugins/ml2/ml2_conf.ini ml2_type_flat flat_networks external;
+         crudini --set /etc/neutron/plugins/ml2/ml2_conf.ini ml2_type_vxlan vni_ranges 1:1000;
+         crudini --set /etc/neutron/plugins/ml2/ml2_conf.ini securitygroup enable_ipset True
+- name: 配置openvswitch_agent.ini
+  shell: crudini --set /etc/neutron/plugins/ml2/openvswitch_agent.ini ovs local_ip {{MAJOR_TUNNEL_IP}};
+         crudini --set /etc/neutron/plugins/ml2/openvswitch_agent.ini ovs bridge_mappings "external:br-ex";
+         crudini --set /etc/neutron/plugins/ml2/openvswitch_agent.ini agent tunnel_types vxlan;
+         crudini --set /etc/neutron/plugins/ml2/openvswitch_agent.ini agent l2_population True;
+         crudini --set /etc/neutron/plugins/ml2/openvswitch_agent.ini agent prevent_arp_spoofing True;
+         crudini --set /etc/neutron/plugins/ml2/openvswitch_agent.ini securitygroup firewall_driver neutron.agent.linux.iptables_firewall.OVSHybridIptablesFirewallDriver;
+         crudini --set /etc/neutron/plugins/ml2/openvswitch_agent.ini securitygroup enable_security_group True
+- name: 配置l3_agent.ini
+  shell: crudini --set /etc/neutron/l3_agent.ini DEFAULT interface_driver neutron.agent.linux.interface.OVSInterfaceDriver;
+         crudini --set /etc/neutron/l3_agent.ini DEFAULT external_network_bridge
+- name: 配置dhcp_agent.ini
+  shell: crudini --set /etc/neutron/dhcp_agent.ini DEFAULT interface_driver neutron.agent.linux.interface.OVSInterfaceDriver;
+         crudini --set /etc/neutron/dhcp_agent.ini DEFAULT enable_isolated_metadata True;
+         crudini --set /etc/neutron/dhcp_agent.ini DEFAULT dhcp_driver neutron.agent.linux.dhcp.Dnsmasq;
+         crudini --set /etc/neutron/dhcp_agent.ini DEFAULT dnsmasq_config_file /etc/neutron/dnsmasq-neutron.conf;
+         crudini --set /etc/neutron/dhcp_agent.ini DEFAULT dnsmasq_dns_servers 114.114.114.114;
+#         \cp {{MAJOR_CONF_PATH}}/neutron/dnsmasq-neutron.conf /etc/neutron/dnsmasq-neutron.conf
+- name: 复制dnsmasq-neutron.conf
+  copy: src="{{mitaka_conf}}/dnsmasq-neutron.conf" dest="/etc/neutron/dnsmasq-neutron.conf"
+- name: 配置metadata_agent.ini
+  shell: crudini --set /etc/neutron/metadata_agent.ini DEFAULT nova_metadata_ip {{CONTROLLER_VIP}};
+         crudini --set /etc/neutron/metadata_agent.ini DEFAULT metadata_proxy_shared_secret METADATA_SECRET
+- name: 追加nova.conf
+  shell: crudini --set /etc/nova/nova.conf neutron url "http://{{CONTROLLER_VIP}}:9696";
+         crudini --set /etc/nova/nova.conf neutron auth_url "http://{{CONTROLLER_VIP}}:35357";
+         crudini --set /etc/nova/nova.conf neutron auth_type password;
+         crudini --set /etc/nova/nova.conf neutron project_domain_name default;
+         crudini --set /etc/nova/nova.conf neutron user_domain_name default;
+         crudini --set /etc/nova/nova.conf neutron region_name RegionOne;
+         crudini --set /etc/nova/nova.conf neutron project_name service;
+         crudini --set /etc/nova/nova.conf neutron username neutron;
+         crudini --set /etc/nova/nova.conf neutron password NEUTRON_PASS;
+         crudini --set /etc/nova/nova.conf neutron service_metadata_proxy True;
+         crudini --set /etc/nova/nova.conf neutron metadata_proxy_shared_secret METADATA_SECRET
+- name: 创建链接;同步数据库
+  shell: ln -s /etc/neutron/plugins/ml2/ml2_conf.ini /etc/neutron/plugin.ini;
+         su -s /bin/sh -c "neutron-db-manage --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/ml2_conf.ini upgrade head" neutron
+- name: 等待3秒
+  pause: seconds=3       
+- name: 启动 服务，并设置开机启动
+  service: name=openvswitch state=started enabled=true
+- name: 设置外部网卡
+  shell: ovs-vsctl add-br br-ex
+- name:
+  shell: bash -login -c 'if [ -n "{{EXT_INTERFACE}}" ]; then     ovs-vsctl add-port br-ex {{EXT_INTERFACE}}; fi'
+- name: 启动网络相关服务
+  shell: systemctl restart openstack-nova-api.service;
+         systemctl enable neutron-server.service neutron-openvswitch-agent.service neutron-dhcp-agent.service neutron-metadata-agent.service neutron-l3-agent.service;
+         systemctl start neutron-server.service neutron-openvswitch-agent.service neutron-dhcp-agent.service neutron-metadata-agent.service neutron-l3-agent.service
+

@@ -1,0 +1,10 @@
+---
+
+- name: 多路径配置
+  shell: \cp -r {{COMPUTE_CONF_PATH}}/cinder/multipath.conf /etc/;
+         rm -f /usr/lib/python2.7/site-packages/os_brick/initiator/connector.py;
+         \cp -r {{COMPUTE_CODE_PATH}}/cinder/connector.py /usr/lib/python2.7/site-packages/os_brick/initiator/;
+         modprobe dm-multipath;
+         modprobe dm-round-robin;
+         systemctl enable multipathd.service;
+         systemctl start multipathd.service;

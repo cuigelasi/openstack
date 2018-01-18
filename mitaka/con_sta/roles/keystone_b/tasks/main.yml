@@ -1,0 +1,26 @@
+---
+
+- name: 备节点的keystone.conf
+  shell: crudini --set /etc/keystone/keystone.conf DEFAULT admin_token 7027356a188bc8247884;
+         crudini --set /etc/keystone/keystone.conf database connection "mysql+pymysql://keystone:KEYSTONE_DBPASS@{{MAJOR_IP}}/keystone";
+         crudini --set /etc/keystone/keystone.conf database slave_connection "mysql+pymysql://keystone:KEYSTONE_DBPASS@{{STANDBY_IP}}/keystone";
+         crudini --set /etc/keystone/keystone.conf token provider fernet;
+         crudini --set /etc/keystone/keystone.conf catalog driver keystone.catalog.backends.sql.Catalog;
+         crudini --set /etc/keystone/keystone.conf identity driver keystone.identity.backends.sql.Identity;
+         crudini --set /etc/keystone/keystone.conf DEFAULT bind_host {{STANDBY_IP}}
+#- name: 配置wsgi-keystone.conf
+#  template: src={{mitaka_conf}}/wsgi-keystone.conf.b.js dest=/etc/httpd/conf.d/wsgi-keystone.conf
+- name: 配置httpd.conf
+  shell: sed -i "s/^Listen.*/Listen {{STANDBY_IP}}:80/" /etc/httpd/conf/httpd.conf;
+         sed -i "s/#ServerName.*/ServerName {{STANDBY_IP}}/" /etc/httpd/conf/httpd.conf;
+         chown -R keystone:keystone /etc/keystone/fernet-keys;
+         chmod 600 /etc/keystone/fernet-keys/*
+         sed -i "s/CONTROLLER_IP/{{STANDBY_IP}}/" {{STANDBY_CONF_PATH}}/keystone/wsgi-keystone.conf;
+         \cp {{STANDBY_CONF_PATH}}/keystone/wsgi-keystone.conf /etc/httpd/conf.d/;
+- name: 启动http服务并设置开机自启
+  service: name=httpd state=started enabled=true
+- name: 配置admin-openrc.sh
+  shell: \cp {{STANDBY_CONF_PATH}}/keystone/admin-openrc.sh /home/;
+         sed -i "s/ADMIN_PASS/{{ADMIN_PASS}}/g" /home/admin-openrc.sh;
+         sed -i "s/CONTROLLER_VIP/{{CONTROLLER_VIP}}/g" /home/admin-openrc.sh;
+         source /home/admin-openrc.sh

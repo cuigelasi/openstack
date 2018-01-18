@@ -1,0 +1,39 @@
+---
+
+- hosts: controller
+  tasks:
+  - name: 检查网络是否畅通
+    shell: ping -c 3 time1.aliyun.com
+  - name: 同步时间
+    shell: ntpdate time1.aliyun.com;hwclock -w
+  - name: 复制chronyd配置文件
+    shell: \cp {{MAJOR_CONF_PATH}}/basic/chrony.conf /etc/chrony.conf
+#    shell: sed -i 's/server/#server/g' /etc/chrony.conf
+  - name: 开启chronyd服务，并设为开机启动
+    service: name=chronyd state=started enabled=true
+
+- hosts: standby
+  tasks:
+  - name: 复制chronyd配置文件
+#    shell: sed -i 's/server/#server/g' /etc/chrony.conf;
+#           sed -i '/# Ignore/i\server {{MAJOR_IP}} iburst' /etc/chrony.conf
+    shell: \cp {{STANDBY_CONF_PATH}}/basic/chrony.conf /etc/chrony.conf;sed -i "s/MAJOR_IP/{{MAJOR_IP}}/" /etc/chrony.conf
+  - name: 开启chronyd服务，并设为开机启动
+    service: name=chronyd state=started enabled=true
+
+- hosts: compute
+  tasks:
+  - name: 复制chronyd配置文件
+    shell: \cp {{COMPUTE_CONF_PATH}}/basic/chrony.conf /etc/chrony.conf
+  - name: 修改chrony配置
+ #   shell: sed -i 's/server/#server/g' /etc/chrony.conf;
+ #          sed -i '/# Ignore/i\server {{MAJOR_IP}} iburst' /etc/chrony.conf;
+ #          sed -i '/# Ignore/i\server {{STANDBY_IP}} iburst' /etc/chrony.conf
+    shell: sed -i "s/MAJOR_IP/{{MAJOR_IP}}/" /etc/chrony.conf;sed -i "s/STANDBY_IP/{{STANDBY_IP}}/" /etc/chrony.conf
+  - name: 开启chronyd服务，并设为开机启动
+    service: name=chronyd state=started enabled=true
+
+- hosts: all
+  tasks:
+  - name: 同步
+    shell: systemctl restart chronyd.service

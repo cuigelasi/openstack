@@ -1,0 +1,38 @@
+---
+
+- name: 配置glance-api.conf
+  shell: crudini --set /etc/glance/glance-api.conf database connection '"mysql+pymysql://glance:GLANCE_DBPASS@{{MAJOR_IP}}/glance"';
+         crudini --set /etc/glance/glance-api.conf database slave_connection '"mysql+pymysql://glance:GLANCE_DBPASS@{{STANDBY_IP}}/glance"';
+         crudini --set /etc/glance/glance-api.conf keystone_authtoken auth_uri '"http://{{CONTROLLER_VIP}}:5000"';
+         crudini --set /etc/glance/glance-api.conf keystone_authtoken auth_url '"http://{{CONTROLLER_VIP}}:35357"';
+         crudini --set /etc/glance/glance-api.conf keystone_authtoken memcached_servers '"{{MAJOR_IP}}:11211,{{STANDBY_IP}}:11211"';
+         crudini --set /etc/glance/glance-api.conf keystone_authtoken auth_type password;
+         crudini --set /etc/glance/glance-api.conf keystone_authtoken project_domain_name default;
+         crudini --set /etc/glance/glance-api.conf keystone_authtoken user_domain_name default;
+         crudini --set /etc/glance/glance-api.conf keystone_authtoken project_name service;
+         crudini --set /etc/glance/glance-api.conf keystone_authtoken username glance;
+         crudini --set /etc/glance/glance-api.conf keystone_authtoken password GLANCE_PASS;
+         crudini --set /etc/glance/glance-api.conf paste_deploy flavor keystone;
+         crudini --set /etc/glance/glance-api.conf glance_store stores file,http;
+         crudini --set /etc/glance/glance-api.conf glance_store default_store file;
+         crudini --set /etc/glance/glance-api.conf glance_store filesystem_store_datadir /var/lib/glance/images/;
+         crudini --set /etc/glance/glance-api.conf DEFAULT bind_host {{STANDBY_IP}};
+         crudini --set /etc/glance/glance-api.conf DEFAULT registry_host {{CONTROLLER_VIP}}
+- name: 配置glance-registry.conf
+  shell: crudini --set /etc/glance/glance-registry.conf database connection '"mysql+pymysql://glance:GLANCE_DBPASS@{{MAJOR_IP}}/glance"';
+         crudini --set /etc/glance/glance-registry.conf database slave_connection '"mysql+pymysql://glance:GLANCE_DBPASS@{{STANDBY_IP}}/glance"';
+         crudini --set /etc/glance/glance-registry.conf keystone_authtoken auth_uri '"http://{{CONTROLLER_VIP}}:5000"';
+         crudini --set /etc/glance/glance-registry.conf keystone_authtoken auth_url '"http://{{CONTROLLER_VIP}}:35357"';
+         crudini --set /etc/glance/glance-registry.conf keystone_authtoken memcached_servers '"{{MAJOR_IP}}:11211,{{STANDBY_IP}}:11211"';
+         crudini --set /etc/glance/glance-registry.conf keystone_authtoken auth_type password;
+         crudini --set /etc/glance/glance-registry.conf keystone_authtoken project_domain_name default;
+         crudini --set /etc/glance/glance-registry.conf keystone_authtoken user_domain_name default;
+         crudini --set /etc/glance/glance-registry.conf keystone_authtoken project_name service;
+         crudini --set /etc/glance/glance-registry.conf keystone_authtoken username glance;
+         crudini --set /etc/glance/glance-registry.conf keystone_authtoken password GLANCE_PASS;
+         crudini --set /etc/glance/glance-registry.conf paste_deploy flavor keystone;
+         crudini --set /etc/glance/glance-registry.conf DEFAULT bind_host {{STANDBY_IP}}
+- name: 启动openstack-glance-api服务并设置为开机自启
+  service: name=openstack-glance-api state=started enabled=true
+- name: 启动openstack-glance-registry服务并设置为开机自启
+  service: name=openstack-glance-registry state=started enabled=true

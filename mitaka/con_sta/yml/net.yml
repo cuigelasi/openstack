@@ -1,0 +1,10 @@
+---
+
+- hosts: all
+  tasks:
+  - name: 配置所有节点的网卡
+    copy: src="/root/con_sta/conf/auto-config" dest="/root/auto-config"
+  - name: cp net.sh
+    copy: src="/root/con_sta/sh/net.sh" dest="/root/net.sh"
+  - name: 执行脚本配置网卡
+    shell: sh /root/net.sh

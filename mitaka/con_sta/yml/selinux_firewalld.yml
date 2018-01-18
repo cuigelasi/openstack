@@ -1,0 +1,22 @@
+---
+
+- hosts: all
+  tasks:
+  - name: 禁用selinux
+    shell: sed -i "s/^SELINUX=.*/SELINUX=disabled/" /etc/selinux/config
+#  - name: 设置selinux策略为permissive
+#    shell: setenforce 0
+
+- hosts: bs
+  tasks:
+  - name: 防火墙规则设置
+    shell: firewall-cmd --zone=public --add-port=123/udp --add-port=80/tcp --add-port=2224/tcp --add-port=5404-5405/udp --add-port=8888/tcp --add-port=3306/tcp --add-port=4444/tcp --add-port=4567/tcp --add-port=4567/udp --add-port=4568/tcp --add-port=4369/tcp --add-port=5672/tcp --add-port=25672/tcp --add-port=11211/tcp --add-port=5000/tcp --add-port=35357/tcp --add-port=9292/tcp --add-port=9191/tcp --add-port=8773-8775/tcp --add-port=6082/tcp --add-port=9696/tcp --add-port=8776/tcp --add-port=4789/udp --permanent
+  - name: 重启防火墙
+    shell: firewall-cmd --reload
+
+- hosts: compute
+  tasks:
+  - name: 打开特定端口
+    shell: firewall-cmd --zone=public --add-port=5900-5999/tcp --add-port=4789/udp --permanent
+  - name: 重启防火墙
+    shell: firewall-cmd --reload

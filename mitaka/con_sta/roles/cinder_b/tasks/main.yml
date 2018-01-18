@@ -1,0 +1,35 @@
+---
+
+- name: 配置cinder.conf
+  shell: crudini --set /etc/cinder/cinder.conf database connection "mysql+pymysql://cinder:CINDER_DBPASS@{{MAJOR_IP}}/cinder";
+         crudini --set /etc/cinder/cinder.conf database slave_connection "mysql+pymysql://cinder:CINDER_DBPASS@{{STANDBY_IP}}/cinder";
+         crudini --set /etc/cinder/cinder.conf DEFAULT transport_url rabbit://openstack:RABBIT_PASS@{{MAJOR_IP}}:5672,openstack:RABBIT_PASS@{{STANDBY_IP}}:5672;
+         crudini --set /etc/cinder/cinder.conf DEFAULT auth_strategy keystone;
+         crudini --set /etc/cinder/cinder.conf keystone_authtoken auth_uri "http://{{CONTROLLER_VIP}}:5000";
+         crudini --set /etc/cinder/cinder.conf keystone_authtoken auth_url "http://{{CONTROLLER_VIP}}:35357";
+         crudini --set /etc/cinder/cinder.conf keystone_authtoken memcached_servers "{{MAJOR_IP}}:11211,{{STANDBY_IP}}:11211";
+         crudini --set /etc/cinder/cinder.conf keystone_authtoken auth_type password;
+         crudini --set /etc/cinder/cinder.conf keystone_authtoken project_domain_name default;
+         crudini --set /etc/cinder/cinder.conf keystone_authtoken user_domain_name default;
+         crudini --set /etc/cinder/cinder.conf keystone_authtoken project_name service;
+         crudini --set /etc/cinder/cinder.conf keystone_authtoken username cinder;
+         crudini --set /etc/cinder/cinder.conf keystone_authtoken password CINDER_PASS;
+         crudini --set /etc/cinder/cinder.conf DEFAULT my_ip {{STANDBY_IP}};
+         crudini --set /etc/cinder/cinder.conf oslo_concurrency lock_path /var/lib/cinder/tmp;
+         crudini --set /etc/cinder/cinder.conf DEFAULT osapi_volume_listen {{STANDBY_IP}};
+         crudini --set /etc/cinder/cinder.conf DEFAULT glance_api_servers "http://{{CONTROLLER_VIP}}:9292"
+- name: 配置存储柜
+  shell: crudini --set /etc/cinder/cinder.conf DEFAULT use_multipath_for_image_xfer True;
+         crudini --set /etc/cinder/cinder.conf DEFAULT enforce_multipath_for_image_xfer True;
+         crudini --set /etc/cinder/cinder.conf DEFAULT volume_driver cinder.volume.drivers.huawei.huawei_driver.HuaweiTISCSIDriver;
+         crudini --set /etc/cinder/cinder.conf DEFAULT cinder_huawei_conf_file /etc/cinder/cinder_huawei_conf.xml;
+         \cp -r {{STANDBY_CONF_PATH}}/cinder/cinder_huawei_conf.xml /etc/cinder/;
+         rm -rf /usr/lib/python2.7/site-packages/cinder/volume/drivers/huawei/;
+         \cp -r {{STANDBY_CODE_PATH}}/cinder/huawei /usr/lib/python2.7/site-packages/cinder/volume/drivers/;
+         rm -f /usr/lib/python2.7/site-packages/os_brick/initiator/connector.py;
+         \cp -r {{STANDBY_CONF_PATH}}/cinder/connector.py /usr/lib/python2.7/site-packages/os_brick/initiator/;
+         crudini --set /etc/nova/nova.conf cinder os_region_name RegionOne
+- name: 开启服务
+  shell: systemctl restart openstack-nova-api.service;
+         systemctl enable openstack-cinder-api.service openstack-cinder-scheduler.service openstack-cinder-volume.service;
+         systemctl start openstack-cinder-api.service openstack-cinder-scheduler.service openstack-cinder-volume.service

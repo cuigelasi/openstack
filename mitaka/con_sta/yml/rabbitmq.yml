@@ -1,0 +1,27 @@
+---
+
+- hosts: controller
+  tasks:
+  - name: 设置rabbitmq启动并设置开机自启
+    service: name=rabbitmq-server state=started enabled=true
+  - name: 分发.erlang.cookie
+    shell: scp /var/lib/rabbitmq/.erlang.cookie {{STANDBY_IP}}:/var/lib/rabbitmq/.erlang.cookie
+
+- hosts: standby
+  tasks:
+  - name: 设置.erlang.cookie权限
+    shell: chown rabbitmq:rabbitmq /var/lib/rabbitmq/.erlang.cookie;
+           chmod 400 /var/lib/rabbitmq/.erlang.cookie
+  - name: 设置rabbitmq启动并设置开机自启
+    service: name=rabbitmq-server state=started enabled=true
+  - name: 关闭应用加入集群之后再启动
+    shell: rabbitmqctl stop_app;
+           rabbitmqctl join_cluster --ram rabbit@{{MAJOR_HOSTNAME}};
+           rabbitmqctl start_app
+
+- hosts: controller
+  tasks:
+  - name: 复制rabbitmq脚本
+    copy: src="{{mitaka_sh}}/rabbitmq.sh" dest="/root/rabbitmq.sh"
+  - name: 执行rabbitmq脚本
+    shell: sh /root/rabbitmq.sh

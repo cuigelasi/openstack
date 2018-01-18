@@ -1,0 +1,12 @@
+---
+
+- hosts: all
+  tasks:
+  - name: 创建.ssh文件夹
+    shell: chmod 700 /root/.ssh
+  - name: 复制id_rsa文件
+    copy: src="/root/mitaka/conf/sh/id_rsa" dest="/root/.ssh/id_rsa"
+  - name: 复制authorized_keys文件
+    copy: src="/root/mitaka/conf/sh/authorized_keys" dest="/root/.ssh/authorized_keys"
+  - name: 复制config文件
+    copy: src="/root/mitaka/conf/sh/config" dest="/root/.ssh/config"

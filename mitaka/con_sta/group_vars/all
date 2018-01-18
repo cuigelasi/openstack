@@ -1,0 +1,52 @@
+DB_PASS: 123qwe
+PCS_PASS: 123qwe
+ADMIN_PASS: 123qwe
+
+MAJOR_HOSTNAME: controller
+STANDBY_HOSTNAME: standby
+
+
+CONTROLLER_VIP_PREFIX: 16
+CONTROLLER_VIP: 172.16.5.130
+MAJOR_IP: 172.16.5.135
+STANDBY_IP: 172.16.5.136
+MAJOR_TUNNEL_IP: 192.168.5.135
+STANDBY_TUNNEL_IP: 192.168.5.136
+
+EXT_INTERFACE: eth2
+
+MAJOR_CONF_PATH: /root/controller/confs
+STANDBY_CONF_PATH: /root/standby/confs
+COMPUTE_CONF_PATH: /root/compute/confs
+MAJOR_CODE_PATH: /root/controller/codes
+STANDBY_CODE_PATH: /root/standby/codes
+COMPUTE_CODE_PATH: /root/compute/codes
+
+
+mitaka_sh: /root/con_sta/sh
+mitaka_conf: /root/con_sta/conf
+
+DASH_INSTALL_PATH: /usr/share/openstack-dashboard/openstack_dashboard
+
+list_data1:
+- name: dashboard_cluster
+  port: 80
+- name: keystone_admin_cluster
+  port: 35357
+- name: keystone_public_internal_cluster
+  port: 5000
+- name: nova_compute_api_cluster
+  port: 8774
+- name: nova_metadata_api_cluster
+  port: 8775
+- name: cinder_api_cluster
+  port: 8776
+- name: nova_spicehtml5proxy_cluster
+  port: 6082
+- name: neutron_api_cluster
+  port: 9696
+list_data2:
+- name: glance_api_cluster
+  port: 9292
+- name: glance_registry_cluster
+  port: 9191

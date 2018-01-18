@@ -1,0 +1,15 @@
+---
+
+- hosts: controller
+  tasks:
+  - name: 配置memcached
+    shell: sed -i "s/127.0.0.1/{{MAJOR_IP}}/g" /etc/sysconfig/memcached
+  - name: 启动memcached服务并设置为开机启动
+    service: name=memcached state=started enabled=true
+
+- hosts: standby
+  tasks:
+  - name: 配置memcached
+    shell: sed -i "s/127.0.0.1/{{STANDBY_IP}}/g" /etc/sysconfig/memcached
+  - name: 启动memcached服务并设置为开机启动
+    service: name=memcached state=started enabled=true

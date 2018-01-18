@@ -1,0 +1,15 @@
+---
+
+- name: 配置dashboard
+  shell: \cp {{STANDBY_CONF_PATH}}/dashboard/local_settings /etc/openstack-dashboard/local_settings;
+         sed -i "s/^OPENSTACK_HOST.*/OPENSTACK_HOST = \"{{CONTROLLER_VIP}}\"/" /etc/openstack-dashboard/local_settings;
+         sed -i "s/MAJOR_IP/{{MAJOR_IP}}/g" /etc/openstack-dashboard/local_settings;
+         sed -i "s/STANDBY_IP/{{STANDBY_IP}}/g" /etc/openstack-dashboard/local_settings;
+         DASH_INSTALL_PATH=/usr/share/openstack-dashboard/openstack_dashboard;
+         \cp -f "{{STANDBY_CODE_PATH}}/openstack_dashboard/settings.py" {{DASH_INSTALL_PATH}}/;
+         \cp -f "{{STANDBY_CODE_PATH}}/openstack_dashboard/test/settings.py" {{DASH_INSTALL_PATH}}/test/;
+         \cp -f {{STANDBY_CODE_PATH}}/openstack_dashboard/static/dashboard/img/*.* {{DASH_INSTALL_PATH}}/static/dashboard/img/;
+- name: 启动httpd
+  shell: systemctl restart httpd.service
+- name: 启动memcached        
+  shell: systemctl restart memcached.service

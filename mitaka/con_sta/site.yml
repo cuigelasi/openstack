@@ -1,0 +1,67 @@
+---
+
+##- include: yml/local_yum.yml
+##- include: yml/net.yml
+#- include: yml/install.yml
+#- include: yml/selinux_firewalld.yml
+##- inclide: yml/ssh.yml
+#- include: yml/chronyd.yml
+#- include: yml/pcs.yml
+#- include: yml/database.yml
+#- include: yml/rabbitmq.yml
+#- include: yml/memcached.yml
+
+#- hosts: controller
+#  roles:
+#  - role: keystone_a
+#- hosts: standby
+#  roles:
+#  - role: keystone_b
+
+#- hosts: controller
+#  roles:
+#  - role: glance_a
+#- hosts: standby
+#  roles:
+#  - role: glance_b
+
+#- hosts: controller
+#  roles:
+#  - role: nova_a
+#- hosts: standby
+#  roles:
+#  - role: nova_b
+#- hosts: compute
+#  roles:
+#  - role: nova_c
+
+#- hosts: controller
+#  roles: 
+#  - role: neutron_a
+#- hosts: standby
+#  roles:
+#  - role: neutron_b
+#- hosts: compute
+#  roles:
+#  - role: neutron_c
+
+#- hosts: controller
+#  roles:
+#  - role: dashboard_a
+#- hosts: standby
+#  roles:
+#  - role: dashboard_b
+
+#- hosts: controller
+#  roles:
+#  - role: cinder_a
+#- hosts: standby
+#  roles:
+#  - role: cinder_b
+#- hosts: compute
+#  roles:
+#  - role: cinder_c
+
+
+
+  
