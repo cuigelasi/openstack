@@ -1,0 +1,37 @@
+---
+
+- import_playbook: yml/rpm.yml
+- import_playbook: yml/chrony.yml
+- import_playbook: yml/selinux_firewalld.yml
+- import_playbook: yml/database.yml
+- import_playbook: yml/message_memcached.yml
+
+- hosts: pike_controller
+  roles:
+  - role: keystone
+
+- hosts: pike_controller
+  roles:
+  - role: glance
+
+- hosts: pike_controller
+  roles:
+  - role: nova
+
+- hosts: pike_compute
+  roles:
+  - role: nova_compute
+- import_playbook: yml/compute.yml
+
+- hosts: pike_controller
+  roles:
+  - role: neutron
+
+- hosts: pike_compute
+  roles:
+  - role: neutron_compute
+
+
+- hosts: pike_controller
+  roles:
+  - role: dashboard

@@ -1,0 +1,11 @@
+---
+
+- name: 复制local_settings
+  copy: src="{{pike_conf}}/local_settings" dest="/etc/openstack-dashboard/local_settings"
+- name: 修改local_settings权限
+  shell: chown root:apache /etc/openstack-dashboard/local_settings
+- name: 配置local_settings
+  shell: sed -i "s/controller/{{MAJOR_IP}}/g" /etc/openstack-dashboard/local_settings;
+- name: 启动相关服务
+  shell: systemctl restart httpd.service memcached.service
+

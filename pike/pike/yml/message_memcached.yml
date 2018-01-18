@@ -1,0 +1,18 @@
+---
+
+- hosts: pike_controller
+  vars_files:
+  - /root/pike/group_vars/all
+  tasks:
+  - name: 开启rabbitmq的服务
+    shell: systemctl enable rabbitmq-server.service;
+           systemctl start rabbitmq-server.service
+  - name: 添加openstack用户
+    shell: rabbitmqctl add_user openstack {{RABBIT_PASS}}
+  - name: 配置openstack用户权限
+    shell: rabbitmqctl set_permissions openstack ".*" ".*" ".*"
+  - name: 配置memcached令牌
+    shell: sed -i "s/127.0.0.1/{{MAJOR_IP}}/g" /etc/sysconfig/memcached
+  - name: 启动memcached服务
+    shell: systemctl enable memcached.service;
+           systemctl start memcached.service

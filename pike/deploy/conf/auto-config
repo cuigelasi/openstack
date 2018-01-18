@@ -1,0 +1,14 @@
+[node1]
+role=controller
+hostname=controller
+
+controller_ip=172.16.11.145
+controller_mac=fa:16:3e:d4:e1:20
+
+[node2]
+role=compute
+hostname=compute
+
+controller_ip=172.16.11.146
+controller_mac=fa:16:3e:62:57:23
+

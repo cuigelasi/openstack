@@ -1,0 +1,16 @@
+---
+
+- hosts: pike_controller
+  vars_files:
+  - /root/pike/group_vars/all
+  tasks:
+  - name: 配置数据库
+    shell: echo -e "[mysqld]\nbind-address = {{MAJOR_IP}}\ndefault-storage-engine = innodb\ninnodb_file_per_table = on\nmax_connections = 4096\ncollation-server = utf8_general_ci\ncharacter-set-server = utf8" >> /etc/my.cnf.d/openstack.cnf
+  - name: 启动数据库
+    shell: systemctl enable mariadb.service;
+           systemctl start mariadb.service
+  - name: 复制msql脚本
+    copy: src="{{pike_sh}}/mysql.sh" dest="/root/mysql.sh"
+  - name: 修改数据库密码
+    shell: sed -i 's/$DB_PASS/{{DB_PASS}}/g' /root/mysql.sh;
+           sh mysql.sh

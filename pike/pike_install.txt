@@ -1,0 +1,59 @@
+#chrony
+yum install chrony
+#openstack repository
+yum install centos-release-openstack-pike
+yum install https://rdoproject.org/repos/rdo-release.rpm
+yum upgrade
+yum install python-openstackclient
+yum install openstack-selinux
+#database
+yum install mariadb mariadb-server python2-PyMySQL
+#message
+yum install rabbitmq-server
+#memcached
+yum install memcached python-memcached
+
+#keystone
+yum install openstack-keystone httpd mod_wsgi
+
+#glance
+yum install openstack-glance
+
+#nova
+yum install openstack-nova-api openstack-nova-conductor openstack-nova-console openstack-nova-novncproxy openstack-nova-scheduler openstack-nova-placement-api
+yum install openstack-nova-compute
+
+#neutron
+yum install openstack-neutron openstack-neutron-ml2 openstack-neutron-linuxbridge ebtables
+yum install openstack-neutron-linuxbridge ebtables ipset
+
+#dashboard
+yum install openstack-dashboard
+
+
+##########################################################################
+controller
+yum -y install chrony
+yum -y install centos-release-openstack-pike
+yum -y install https://rdoproject.org/repos/rdo-release.rpm
+yum -y upgrade
+yum -y install python-openstackclient
+yum -y install openstack-selinux
+yum -y install mariadb mariadb-server python2-PyMySQL
+yum -y install rabbitmq-server
+yum -y install memcached python-memcached
+yum -y install openstack-keystone httpd mod_wsgi
+yum -y install openstack-glance
+yum -y install openstack-nova-api openstack-nova-conductor openstack-nova-console openstack-nova-novncproxy openstack-nova-scheduler openstack-nova-placement-api
+yum -y install openstack-neutron openstack-neutron-ml2 openstack-neutron-linuxbridge ebtables
+yum -y install openstack-dashboard
+###########################################################################
+compute
+yum -y install chrony;
+yum -y install centos-release-openstack-pike;
+yum -y install https://rdoproject.org/repos/rdo-release.rpm;
+yum -y upgrade;
+yum -y install python-openstackclient;
+yum -y install openstack-selinux;
+yum -y install openstack-nova-compute;
+yum -y install openstack-neutron-linuxbridge ebtables ipset

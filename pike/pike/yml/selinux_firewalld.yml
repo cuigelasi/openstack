@@ -1,0 +1,28 @@
+---
+
+- hosts: pike
+  tasks:
+  - name: 关闭selinux
+    shell: sed -i "s/^SELINUX=.*/SELINUX=disabled/" /etc/selinux/config;
+           setenforce 0
+
+- hosts: pike_controller
+  tasks:
+  - name: 开放防火墙端口
+    shell: firewall-cmd --zone=public --add-port=123/udp --permanent;
+           firewall-cmd --zone=public --permanent --add-port=3306/tcp --add-port=4444/tcp --add-port=4567/tcp --add-port=4567/udp --add-port=4568/tcp;
+           firewall-cmd --zone=public --permanent --add-port=4369/tcp --add-port=5672/tcp --add-port=25672/tcp;
+           firewall-cmd --zone=public --permanent --add-port=11211/tcp;
+           firewall-cmd --zone=public --permanent --add-port=80/tcp;
+           firewall-cmd --zone=public --permanent --add-port=5000/tcp --add-port=35357/tcp;
+           firewall-cmd --zone=public --permanent --add-port=9292/tcp --add-port=9191/tcp;
+           firewall-cmd --zone=public --permanent --add-port=8773-8778/tcp;
+           firewall-cmd --zone=public --permanent --add-port=9696/tcp --add-port=8472/udp;
+           firewall-cmd --zone=public --permanent --add-port=6080/tcp;
+           firewall-cmd --reload
+
+- hosts: pike_compute
+  tasks:
+  - name: 开放防火墙端口
+    shell: firewall-cmd --zone=public --permanent --add-port=5900-5999/tcp --add-port=8472/udp;
+           firewall-cmd --reload

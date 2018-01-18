@@ -1,0 +1,56 @@
+---
+
+- name: 配置keystone.conf
+  shell: crudini --set /etc/keystone/keystone.conf database connection "mysql+pymysql://keystone:{{KEYSTONE_PASS}}@{{MAJOR_IP}}/keystone";
+         crudini --set /etc/keystone/keystone.conf token provider fernet
+- name: 创建openstack相关数据库
+  shell: mysql -uroot -p{{DB_PASS}} -e "CREATE DATABASE keystone;";
+         mysql -uroot -p{{DB_PASS}} -e "CREATE DATABASE glance;";
+         mysql -uroot -p{{DB_PASS}} -e "CREATE DATABASE nova_api;";
+         mysql -uroot -p{{DB_PASS}} -e "CREATE DATABASE nova;";
+         mysql -uroot -p{{DB_PASS}} -e "CREATE DATABASE nova_cell0;";
+         mysql -uroot -p{{DB_PASS}} -e "CREATE DATABASE neutron;";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'{{MAJOR_IP}}' IDENTIFIED BY '{{KEYSTONE_PASS}}';";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'%' IDENTIFIED BY '{{KEYSTONE_PASS}}';";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON glance.* TO 'glance'@'{{MAJOR_IP}}' IDENTIFIED BY '{{GLANCE_PASS}}';";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON glance.* TO 'glance'@'%' IDENTIFIED BY '{{GLANCE_PASS}}';";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON nova_api.* TO 'nova'@'{{MAJOR_IP}}' IDENTIFIED BY '{{NOVA_PASS}}';";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON nova_api.* TO 'nova'@'%' IDENTIFIED BY '{{NOVA_PASS}}';";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON nova.* TO 'nova'@'{{MAJOR_IP}}' IDENTIFIED BY '{{NOVA_PASS}}';";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON nova.* TO 'nova'@'%' IDENTIFIED BY '{{NOVA_PASS}}';";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON nova_cell0.* TO 'nova'@'{{MAJOR_IP}}' IDENTIFIED BY '{{NOVA_PASS}}';";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON nova_cell0.* TO 'nova'@'%' IDENTIFIED BY '{{NOVA_PASS}}';";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON neutron.* TO 'neutron'@'{{MAJOR_IP}}' IDENTIFIED BY '{{NEUTRON_PASS}}';";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON neutron.* TO 'neutron'@'%' IDENTIFIED BY '{{NEUTRON_PASS}}';"
+- name: 填充数据库
+  shell: su -s /bin/sh -c "keystone-manage db_sync" keystone
+- name: 初始化Fernet key
+  shell: keystone-manage fernet_setup --keystone-user keystone --keystone-group keystone;
+         keystone-manage credential_setup --keystone-user keystone --keystone-group keystone
+- name: 创建服务实体和API端点
+  shell: keystone-manage bootstrap --bootstrap-password {{ADMIN_PASS}} --bootstrap-admin-url http://{{MAJOR_IP}}:35357/v3/ --bootstrap-internal-url http://{{MAJOR_IP}}:5000/v3/ --bootstrap-public-url http://{{MAJOR_IP}}:5000/v3/ --bootstrap-region-id RegionOne
+- name: 配置apache服务器
+  shell: echo "ServerName {{MAJOR_IP}}" >> /etc/httpd/conf/httpd.conf
+- name: 创建链接
+  shell: ln -s /usr/share/keystone/wsgi-keystone.conf /etc/httpd/conf.d/
+- name: 启动apache服务
+  shell: systemctl enable httpd.service;
+         systemctl start httpd.service
+- name: 复制keystone.sh
+  copy: src="{{pike_sh}}/keystone.sh" dest="/root/keystone.sh"
+- name: 修改keystone.sh
+  shell: sed -i 's/$controller_ip/{{MAJOR_IP}}/' /root/keystone.sh;
+         sed -i 's/$ADMIN_PASS/{{ADMIN_PASS}}/' /root/keystone.sh;
+         sed -i 's/$DEMO_PASS/{{DEMO_PASS}}/' /root/keystone.sh
+- name: 创建域、项目、用户、角色
+  shell: sh /root/keystone.sh;
+- name: 复制admin-openrc.sh
+  copy: src="{{pike_sh}}/admin-openrc.sh" dest="/home/"
+- name: 修改admin-openrc.sh
+  shell: sed -i 's/controller/{{MAJOR_IP}}/' /home/admin-openrc.sh;
+         sed -i 's/ADMIN_PASS/{{ADMIN_PASS}}/' /home/admin-openrc.sh
+- name: 复制demo-openrc.sh
+  copy: src="{{pike_sh}}/demo-openrc.sh" dest="/home/"
+- name: 修改demo-openrc.sh
+  shell: sed -i 's/controller/{{MAJOR_IP}}/' /home/demo-openrc.sh;
+         sed -i 's/DEMO_PASS/{{DEMO_PASS}}/' /home/demo-openrc.sh
