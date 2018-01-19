@@ -1,0 +1,32 @@
+---
+
+- hosts: ocata_controller
+  vars_files:
+  - /root/ha_ocata/group_vars/all
+  tasks:
+  - name: 设置rabbitmq启动并设置开机自启
+    service: name=rabbitmq-server state=started enabled=true
+  - name: 分发.erlang.cookie
+    shell: scp /var/lib/rabbitmq/.erlang.cookie {{STANDBY_IP}}:/var/lib/rabbitmq/.erlang.cookie
+
+- hosts: ocata_standby
+  vars_files:
+  - /root/ha_ocata/group_vars/all
+  tasks:
+  - name: 设置.erlang.cookie权限
+    shell: chown rabbitmq:rabbitmq /var/lib/rabbitmq/.erlang.cookie;
+           chmod 400 /var/lib/rabbitmq/.erlang.cookie
+  - name: 设置rabbitmq启动并设置开机自启
+    service: name=rabbitmq-server state=started enabled=true
+  - name: 关闭应用加入集群之后再启动
+    shell: rabbitmqctl stop_app;
+           rabbitmqctl join_cluster --ram rabbit@{{MAJOR_HOSTNAME}};
+           rabbitmqctl start_app
+
+- hosts: ocata_controller
+  vars_files:
+  - /root/ha_ocata/group_vars/all
+  tasks:
+  - name: 添加用户
+    shell: rabbitmqctl add_user openstack {{RABBIT_PASS}};
+           rabbitmqctl set_permissions openstack ".*" ".*" ".*"

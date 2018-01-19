@@ -1,0 +1,23 @@
+---
+
+- hosts: ocata_compute
+  vars_files:
+  - /root/ha_ocata/group_vars/all
+  tasks:
+  - name: 冷迁移，配置nova互信
+    shell: usermod -s /bin/bash nova;
+           mkdir /var/lib/nova/.ssh;
+           chmod 700 /var/lib/nova/.ssh;
+           \cp /root/.ssh/* /var/lib/nova/.ssh/;
+           chmod 600 /var/lib/nova/.ssh/config;
+           chmod 600 /var/lib/nova/.ssh/id_rsa;
+           chmod 600 /var/lib/nova/.ssh/authorized_keys;
+           chown -R nova:nova /var/lib/nova/.ssh;
+           systemctl start libvirtd.service openstack-nova-compute.service
+  - name: 热迁移，配置libvirt
+    shell: crudini --set /etc/nova/nova.conf libvirt live_migration_flag "VIR_MIGRATE_UNDEFINE_SOURCE,VIR_MIGRATE_PEER2PEER,VIR_MIGRATE_LIVE,VIR_MIGRATE_PERSIST_DEST,VIR_MIGRATE_TUNNELLED";
+           COMPUTE_IP=`crudini --get /root/ip.txt ip eth0`;
+           echo -e "listen_tls = 0\nlisten_tcp = 1\ntcp_port = 16509\nlisten_addr = $COMPUTE_IP\nauth_tcp = none" >> /etc/libvirt/libvirtd.conf;
+           echo -e "LIBVIRTD_CONFIG=/etc/libvirt/libvirtd.conf\nLIBVIRTD_ARGS="--listen"" >> /etc/sysconfig/libvirtd;
+           systemctl restart libvirtd.service
+           

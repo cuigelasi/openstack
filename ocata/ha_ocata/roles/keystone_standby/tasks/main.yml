@@ -1,0 +1,44 @@
+---
+
+#- name: 备节点的keystone.conf
+#  shell: crudini --set /etc/keystone/keystone.conf database connection "mysql+pymysql://keystone:{{KEYSTONE_DBPASS}}@{{MAJOR_IP}}/keystone";
+#         crudini --set /etc/keystone/keystone.conf database slave_connection "mysql+pymysql://keystone:{{KEYSTONE_DBPASS}}@{{STANDBY_IP}}/keystone";
+#         crudini --set /etc/keystone/keystone.conf token provider fernet;
+#         crudini --set /etc/keystone/keystone.conf DEFAULT bind_host {{STANDBY_IP}}
+
+#- name: 配置httpd.conf
+#  shell: echo "ServerName {{STANDBY_IP}}" >> /etc/httpd/conf/httpd.conf;
+#         sed -i 's/^Listen.*/Listen {{STANDBY_IP}}:80/' /etc/httpd/conf/httpd.conf;
+#         sed -i 's/^Listen 5000/Listen {{STANDBY_IP}}:5000/' /usr/share/keystone/wsgi-keystone.conf;
+#         sed -i 's/^Listen 35357/Listen {{STANDBY_IP}}:35357/' /usr/share/keystone/wsgi-keystone.conf;
+#         ln -s /usr/share/keystone/wsgi-keystone.conf /etc/httpd/conf.d/
+
+#- name: 赋予fernet-keys相应的权限
+#  shell: chown -R keystone:keystone /etc/keystone/fernet-keys;
+#         chmod 600 /etc/keystone/fernet-keys/*
+
+- name: 修改http配置
+  shell: sed -i '/<\/VirtualHost>/i\  <Directory />' /etc/httpd/conf.d/00-nova-placement-api.conf;
+         sed -i '/<\/VirtualHost>/i\    Options All' /etc/httpd/conf.d/00-nova-placement-api.conf;
+         sed -i '/<\/VirtualHost>/i\    AllowOverride All' /etc/httpd/conf.d/00-nova-placement-api.conf;
+         sed -i '/<\/VirtualHost>/i\    Require all granted' /etc/httpd/conf.d/00-nova-placement-api.conf;
+         sed -i '/<\/VirtualHost>/i\  </Directory>' /etc/httpd/conf.d/00-nova-placement-api.conf;
+         sed -i '/<\/VirtualHost>/i\  <Directory /usr/bin/nova-placement-api>' /etc/httpd/conf.d/00-nova-placement-api.conf;
+         sed -i '/<\/VirtualHost>/i\    Options All' /etc/httpd/conf.d/00-nova-placement-api.conf;
+         sed -i '/<\/VirtualHost>/i\    AllowOverride All' /etc/httpd/conf.d/00-nova-placement-api.conf;
+         sed -i '/<\/VirtualHost>/i\    Require all granted' /etc/httpd/conf.d/00-nova-placement-api.conf;
+         sed -i '/<\/VirtualHost>/i\  </Directory>' /etc/httpd/conf.d/00-nova-placement-api.conf;
+         sed -i "s/^Listen 8778/Listen {{STANDBY_IP}}:8778/" /etc/httpd/conf.d/00-nova-placement-api.conf
+- name: 启动http服务并设置开机自启
+  shell: systemctl enable httpd.service;
+         systemctl restart httpd.service
+- name: 复制admin-openrc.sh
+  copy: src="{{ocata_sh}}/admin-openrc.sh" dest="/home/"
+- name: 修改admin-openrc.sh
+  shell: sed -i 's/controller/{{CONTROLLER_VIP}}/' /home/admin-openrc.sh;
+         sed -i 's/ADMIN_PASS/{{ADMIN_PASS}}/' /home/admin-openrc.sh
+- name: 复制demo-openrc.sh
+  copy: src="{{ocata_sh}}/demo-openrc.sh" dest="/home/"
+- name: 修改demo-openrc.sh
+  shell: sed -i 's/controller/{{CONTROLLER_VIP}}/' /home/demo-openrc.sh;
+         sed -i 's/DEMO_PASS/{{DEMO_PASS}}/' /home/demo-openrc.sh

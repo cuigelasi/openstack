@@ -1,0 +1,77 @@
+---
+
+- hosts: ocata_controller
+  vars_files:
+  - /root/ha_ocata/group_vars/all
+  tasks:
+  - name: 配置server.cnf
+    shell: crudini --set /etc/my.cnf.d/server.cnf mysqld datadir /var/lib/mysql;
+           crudini --set /etc/my.cnf.d/server.cnf mysqld socket /var/lib/mysql/mysql.sock;
+           crudini --set /etc/my.cnf.d/server.cnf mysqld user mysql;
+           crudini --set /etc/my.cnf.d/server.cnf mysqld character-set-server utf8;
+           crudini --set /etc/my.cnf.d/server.cnf mysqld max_connections 1000;
+           crudini --set /etc/my.cnf.d/server.cnf galera wsrep_on ON;
+           crudini --set /etc/my.cnf.d/server.cnf galera wsrep_provider /usr/lib64/galera/libgalera_smm.so;
+           crudini --set /etc/my.cnf.d/server.cnf galera wsrep_provider_options '"pc.recovery=TRUE;gcache.size=300M"';
+           crudini --set /etc/my.cnf.d/server.cnf galera wsrep_cluster_address '"gcomm://{{MAJOR_IP}},{{STANDBY_IP}}"';
+           crudini --set /etc/my.cnf.d/server.cnf galera binlog_format row;
+           crudini --set /etc/my.cnf.d/server.cnf galera default_storage_engine InnoDB;
+           crudini --set /etc/my.cnf.d/server.cnf galera innodb_autoinc_lock_mode 2;
+           crudini --set /etc/my.cnf.d/server.cnf galera innodb_buffer_pool_size 122M;
+           crudini --set /etc/my.cnf.d/server.cnf galera wsrep_sst_method rsync;
+           crudini --set /etc/my.cnf.d/server.cnf galera wsrep_node_address '"{{MAJOR_IP}}"';
+           crudini --set /etc/my.cnf.d/server.cnf galera wsrep_node_name '"{{MAJOR_HOSTNAME}}"';
+           crudini --set /etc/my.cnf.d/server.cnf galera bind-address {{MAJOR_IP}};
+           crudini --set /etc/my.cnf.d/server.cnf galera innodb_flush_log_at_trx_commit 0;
+  - name: 等待3秒
+    pause: seconds=3
+
+- hosts: ocata_standby
+  vars_files:
+  - /root/ha_ocata/group_vars/all
+  tasks:
+  - name: 配置server.cnf
+    shell: crudini --set /etc/my.cnf.d/server.cnf mysqld datadir /var/lib/mysql;
+           crudini --set /etc/my.cnf.d/server.cnf mysqld socket /var/lib/mysql/mysql.sock;
+           crudini --set /etc/my.cnf.d/server.cnf mysqld user mysql;
+           crudini --set /etc/my.cnf.d/server.cnf mysqld character-set-server utf8;
+           crudini --set /etc/my.cnf.d/server.cnf mysqld max_connections 1000;
+           crudini --set /etc/my.cnf.d/server.cnf galera wsrep_on ON;
+           crudini --set /etc/my.cnf.d/server.cnf galera wsrep_provider /usr/lib64/galera/libgalera_smm.so;
+           crudini --set /etc/my.cnf.d/server.cnf galera wsrep_provider_options '"pc.recovery=TRUE;gcache.size=300M"';
+           crudini --set /etc/my.cnf.d/server.cnf galera wsrep_cluster_address '"gcomm://{{MAJOR_IP}},{{STANDBY_IP}}"';
+           crudini --set /etc/my.cnf.d/server.cnf galera binlog_format row;
+           crudini --set /etc/my.cnf.d/server.cnf galera default_storage_engine InnoDB;
+           crudini --set /etc/my.cnf.d/server.cnf galera innodb_autoinc_lock_mode 2;
+           crudini --set /etc/my.cnf.d/server.cnf galera innodb_buffer_pool_size 122M;
+           crudini --set /etc/my.cnf.d/server.cnf galera wsrep_sst_method rsync;
+           crudini --set /etc/my.cnf.d/server.cnf galera wsrep_node_address '"{{STANDBY_IP}}"';
+           crudini --set /etc/my.cnf.d/server.cnf galera wsrep_node_name '"{{STANDBY_HOSTNAME}}"';
+           crudini --set /etc/my.cnf.d/server.cnf galera bind-address {{STANDBY_IP}};
+           crudini --set /etc/my.cnf.d/server.cnf galera innodb_flush_log_at_trx_commit 0;
+
+- hosts: ocata_controller
+  vars_files:
+  - /root/ha_ocata/group_vars/all
+  tasks:
+  - name: 开启集群
+    shell: nohup mysqld --user=mysql --wsrep-new-cluster >/dev/null 2>&1 &
+  - name: 复制msql脚本
+    copy: src="{{ocata_sh}}/mysql.sh" dest="/root/mysql.sh"
+  - name: 复制database脚本
+    copy: src="{{ocata_sh}}/database.sh" dest="/root/database.sh"
+  - name: 设置初始密码
+    shell: sed -i 's/$DB_PASS/{{DB_PASS}}/g' /root/mysql.sh;
+           sh mysql.sh
+
+- hosts: ocata_standby
+  tasks:
+  - name: 启动数据库服务
+    shell: systemctl start mariadb.service
+
+- hosts: ocata_controller
+  tasks:
+  - name: 关闭mysql相关服务
+    shell: pkill -SIGQUIT mysqld
+  - name: 启动数据库服务
+    shell: systemctl start mariadb.service

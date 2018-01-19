@@ -1,0 +1,19 @@
+---
+
+- hosts: ocata_controller
+  vars_files:
+  - /root/ha_ocata/group_vars/all
+  tasks:
+  - name: 配置memcached
+    shell: sed -i "s/127.0.0.1/{{MAJOR_IP}}/g" /etc/sysconfig/memcached
+  - name: 启动memcached服务并设置为开机启动
+    service: name=memcached state=started enabled=true
+
+- hosts: ocata_standby
+  vars_files:
+  - /root/ha_ocata/group_vars/all
+  tasks:
+  - name: 配置memcached
+    shell: sed -i "s/127.0.0.1/{{STANDBY_IP}}/g" /etc/sysconfig/memcached
+  - name: 启动memcached服务并设置为开机启动
+    service: name=memcached state=started enabled=true

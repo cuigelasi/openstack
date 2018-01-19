@@ -1,0 +1,48 @@
+---
+
+- name: 创建数据库
+  shell: mysql -uroot -p{{DB_PASS}} -e "CREATE DATABASE manila;";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON manila.* TO 'manila'@'{{MAJOR_IP}}' IDENTIFIED BY '{{MANILA_PASS}}';";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON manila.* TO 'manila'@'%' IDENTIFIED BY '{{MANILA_PASS}}';"
+
+- name: 创建manila服务实体和API
+  shell: source /home/admin-openrc.sh;
+         openstack user create --domain default --password 123qwe manila;
+         openstack role add --project service --user manila admin;
+         openstack service create --name manila --description "OpenStack Shared File Systems" share;
+         openstack service create --name manilav2 --description "OpenStack Shared File Systems" sharev2;
+         openstack endpoint create --region RegionOne share public http://{{CONTROLLER_VIP}}:8786/v1/%\(tenant_id\)s;
+         openstack endpoint create --region RegionOne share admin http://{{CONTROLLER_VIP}}:8786/v1/%\(tenant_id\)s;
+         openstack endpoint create --region RegionOne share admin http://{{CONTROLLER_VIP}}:8786/v1/%\(tenant_id\)s;
+         openstack endpoint create --region RegionOne sharev2 public http://{{CONTROLLER_VIP}}:8786/v2/%\(tenant_id\)s;
+         openstack endpoint create --region RegionOne sharev2 internal http://{{CONTROLLER_VIP}}:8786/v2/%\(tenant_id\)s;
+         openstack endpoint create --region RegionOne sharev2 admin http://{{CONTROLLER_VIP}}:8786/v2/%\(tenant_id\)s;
+
+- name: 配置manila.conf
+  shell: crudini --set /etc/manila/manila.conf database connection "mysql+pymysql://manila:{{MANILA_PASS}}@{{MAJOR_IP}}/manila";
+         crudini --set /etc/manila/manila.conf database slave_connection "mysql+pymysql://manila:{{MANILA_PASS}}@{{STANDBY_IP}}/manila";
+         crudini --set /etc/manila/manila.conf DEFAULT transport_url "rabbit://openstack:{{RABBIT_PASS}}@{{MAJOR_IP}},openstack:{{RABBIT_PASS}}@{{STANDBY_IP}}";
+         crudini --set /etc/manila/manila.conf DEFAULT default_share_type default_share_type;
+         crudini --set /etc/manila/manila.conf DEFAULT share_name_template share-%s;
+         crudini --set /etc/manila/manila.conf DEFAULT rootwrap_config /etc/manila/rootwrap.conf;
+         crudini --set /etc/manila/manila.conf DEFAULT api_paste_config /etc/manila/api-paste.ini;
+         crudini --set /etc/manila/manila.conf DEFAULT auth_strategy keystone;
+         crudini --set /etc/manila/manila.conf DEFAULT my_ip {{MAJOR_IP}};
+         crudini --set /etc/manila/manila.conf keystone_authtoken memcached_servers "{{MAJOR_IP}}:11211,{{STANDBY_IP}}:11211";
+         crudini --set /etc/manila/manila.conf keystone_authtoken auth_uri http://{{CONTROLLER_VIP}}:5000;
+         crudini --set /etc/manila/manila.conf keystone_authtoken auth_url http://{{CONTROLLER_VIP}}:35357;
+         crudini --set /etc/manila/manila.conf keystone_authtoken auth_type password;
+         crudini --set /etc/manila/manila.conf keystone_authtoken project_domain_id default;
+         crudini --set /etc/manila/manila.conf keystone_authtoken user_domain_id default;
+         crudini --set /etc/manila/manila.conf keystone_authtoken project_name service;
+         crudini --set /etc/manila/manila.conf keystone_authtoken username manila;
+         crudini --set /etc/manila/manila.conf keystone_authtoken password {{MANILA_PASS}};
+         crudini --set /etc/manila/manila.conf oslo_concurrency lock_path /var/lock/manila
+
+- name: 同步数据库
+  shell: su -s /bin/sh -c "manila-manage db sync" manila
+
+- name: 开启相关服务
+  shell: systemctl enable openstack-manila-api.service openstack-manila-scheduler.service;
+         systemctl start openstack-manila-api.service openstack-manila-scheduler.service
+

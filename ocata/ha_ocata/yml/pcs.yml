@@ -1,0 +1,52 @@
+---
+
+- hosts: controller_standby
+  vars_files:
+  - /root/ha_ocata/group_vars/all
+  tasks:
+  - name: 设置net.ipv4.ip_nonlocal_bind
+    shell: echo "net.ipv4.ip_nonlocal_bind = 1" >> /etc/sysctl.conf;
+           sysctl -p
+  - name: pcs service start
+    service: name=pcsd state=started enabled=true
+  - name: update hacluster passwd
+    shell: echo {{PCS_PASS}} | passwd --stdin hacluster
+
+- hosts: ocata_controller
+  vars_files:
+  - /root/ha_ocata/group_vars/all
+  tasks:
+  - name: 对组成群集的节点进行身份验证
+    shell: pcs cluster auth {{MAJOR_HOSTNAME}} {{STANDBY_HOSTNAME}} -u hacluster -p {{PCS_PASS}} --force;
+  - name: 创建pcs-cluster集群
+    shell: pcs cluster setup --force --name pcs-cluster {{MAJOR_HOSTNAME}} {{STANDBY_HOSTNAME}}
+  - name: 启动整个集群
+    shell: pcs cluster start --all
+  - name: 设置集群开机自启
+    shell: pcs cluster enable --all
+  - name: 设置集群基本属性
+    shell: pcs property set pe-warn-series-max=1000 pe-input-series-max=1000 pe-error-series-max=1000 cluster-recheck-interval=5min
+  - name: 弃用STONITH机制
+    shell: pcs property set stonith-enabled=false
+  - name: 设置可在群集节点之间自由浮动的虚拟IP地址
+    shell: pcs resource create vip ocf:heartbeat:IPaddr2 ip="{{CONTROLLER_VIP}}" cidr_netmask="{{CONTROLLER_VIP_PREFIX}}" op monitor interval="30s"
+  - name: 配置haproxy.cfg
+    template: src={{ocata_conf}}/haproxy.cfg.j2 dest=/etc/haproxy/haproxy.cfg
+
+- hosts: ocata_standby
+  vars_files:
+  - /root/ha_ocata/group_vars/all
+  tasks:
+  - name: 配置haproxy.cfg
+    template: src={{ocata_conf}}/haproxy.cfg.j2 dest=/etc/haproxy/haproxy.cfg
+
+- hosts: ocata_controller
+  vars_files:
+  - /root/ha_ocata/group_vars/all
+  tasks:
+  - name: 将HAProxy添加到群集
+    shell: pcs resource create lb-haproxy systemd:haproxy --clone
+  - name: 确保VIP只能在HAProxy处于活动状态的计算机上运行
+    shell: pcs constraint order start vip then lb-haproxy-clone kind=Optional
+  - name: 配置资源捆绑关系
+    shell: pcs constraint colocation add lb-haproxy-clone with vip

@@ -1,0 +1,64 @@
+---
+
+#- import_playbook: yml/compute.yml
+#- import_playbook: yml/rpm.yml
+#- import_playbook: yml/selinux_firewalld.yml
+#- import_playbook: yml/chrony.yml
+#- import_playbook: yml/pcs.yml
+#- import_playbook: yml/database.yml
+#- import_playbook: yml/rabbitmq.yml
+#- import_playbook: yml/memcached.yml
+
+
+
+#- hosts: ocata_controller
+#  roles:
+#  - role: keystone_con
+
+#- hosts: ocata_standby
+#  roles:
+#  - role: keystone_standby
+
+#- hosts: ocata_controller
+#  roles:
+#  - role: glance_con
+
+#- hosts: ocata_standby
+#  roles:
+#  - role: glance_standby
+
+#- hosts: ocata_controller
+#  roles:
+#  - role: nova_spice_con
+
+#- hosts: ocata_standby
+#  roles:
+#  - role: nova_spice_standby 
+
+#- hosts: ocata_compute
+#  roles:
+#  - role: nova_spice_com
+
+#- import_playbook: yml/add_compute.yml
+
+#- import_playbook: yml/migration.yml
+
+#- hosts: ocata_controller
+#  roles:
+#  - role: neutron_con
+
+#- hosts: ocata_standby
+#  roles:
+#  - role: neutron_standby
+
+#- hosts: ocata_compute
+#  roles:
+#  - role: neutron_com
+
+#- hosts: ocata_controller
+#  roles:
+#  - role: dashboard
+
+#- hosts: ocata_standby
+#  roles:
+#  - role: dashboard_standby

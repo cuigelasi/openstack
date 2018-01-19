@@ -1,0 +1,20 @@
+---
+
+- name: 配置manila.conf
+  shell: crudini --set /etc/manila/manila.conf database connection "mysql://manila:{{MANILA_PASS}}@{{MAJOR_IP}}/manila";
+         crudini --set /etc/manila/manila.conf database slave_connection "mysql+pymysql://manila:{{MANILA_PASS}}@{{STANDBY_IP}}/manila";
+         crudini --set /etc/manila/manila.conf DEFAULT transport_url "rabbit://openstack:{{RABBIT_PASS}}@{{MAJOR_IP}},openstack:{{RABBIT_PASS}}@{{STANDBY_IP}}";
+         crudini --set /etc/manila/manila.conf DEFAULT default_share_type default_share_type;
+         crudini --set /etc/manila/manila.conf DEFAULT rootwrap_config /etc/manila/rootwrap.conf;
+         crudini --set /etc/manila/manila.conf DEFAULT auth_strategy keystone;
+         crudini --set /etc/manila/manila.conf DEFAULT my_ip {{MAJOR_IP}};
+         crudini --set /etc/manila/manila.conf keystone_authtoken memcached_servers "{{MAJOR_IP}}:11211,{{STANDBY_IP}}:11211";
+         crudini --set /etc/manila/manila.conf keystone_authtoken auth_uri http://{{CONTROLLER_VIP}}:5000;
+         crudini --set /etc/manila/manila.conf keystone_authtoken auth_url http://{{CONTROLLER_VIP}}:35357;
+         crudini --set /etc/manila/manila.conf keystone_authtoken auth_type password;
+         crudini --set /etc/manila/manila.conf keystone_authtoken project_domain_id default;
+         crudini --set /etc/manila/manila.conf keystone_authtoken user_domain_id default;
+         crudini --set /etc/manila/manila.conf keystone_authtoken project_name service;
+         crudini --set /etc/manila/manila.conf keystone_authtoken username manila;
+         crudini --set /etc/manila/manila.conf keystone_authtoken password {{MANILA_PASS}};
+         crudini --set /etc/manila/manila.conf oslo_concurrency lock_path /var/lock/manila

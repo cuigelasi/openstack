@@ -1,0 +1,13 @@
+---
+
+- hosts: ocata_compute
+  tasks:
+  - name: 获取控制网络ip
+    shell: eth0=`ifconfig eth1 | grep -w inet | awk '{print $2}'`;
+           eth1=`ifconfig eth1 | grep -w inet | awk '{print $2}'`;
+           eth2=`ifconfig eth2 | grep -w inet | awk '{print $2}'`;
+           echo "[ip]" >> /root/ip.txt;
+           echo "eth0=$eth0" >> /root/ip.txt;
+           echo "eth1=$eth1" >> /root/ip.txt;
+           echo "eth2=$eth2" >> /root/ip.txt
+

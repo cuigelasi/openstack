@@ -1,0 +1,17 @@
+---
+
+- name: 复制local_settings
+  copy: src="{{ocata_conf}}/local_settings" dest="/etc/openstack-dashboard/local_settings"
+
+- name: 配置local_settings
+  shell: sed -i 's/$controller_ip/{{CONTROLLER_VIP}}/g' /etc/openstack-dashboard/local_settings;
+         sed -i 's/MAJOR_IP/{{MAJOR_IP}}/' /etc/openstack-dashboard/local_settings;
+         sed -i 's/STANDBY_IP/{{STANDBY_IP}}/' /etc/openstack-dashboard/local_settings;
+
+- name: 修改图标
+  shell: \scp {{ocata_conf}}/image/* {{STANDBY_IP}}:/usr/share/openstack-dashboard/openstack_dashboard/static/dashboard/img/;
+         sed -i "s/logo-splash.svg/logo-splash.png/" /usr/share/openstack-dashboard/openstack_dashboard/themes/material/templates/auth/_splash.html;
+         sed -i "s/logo-splash.svg/logo-splash.png/" /usr/lib/python2.7/site-packages/horizon/templates/auth/_splash.html
+
+- name: 启动httpd,memcached服务
+  shell: systemctl restart httpd.service memcached.service

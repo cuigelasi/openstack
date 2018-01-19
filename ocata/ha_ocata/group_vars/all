@@ -1,0 +1,58 @@
+#ip
+MAJOR_IP: 172.16.5.135
+STANDBY_IP: 172.16.5.136
+ALLOW: 172.16.0.0
+
+MAJOR_TUNNEL_IP: 192.168.5.135
+STANDBY_TUNNEL_IP: 192.168.5.136
+EXT_INTERFACE: eth2
+#path
+EXPECT: /usr/bin/expect
+ocata_sh: /root/ha_ocata/sh
+ocata_conf: /root/ha_ocata/conf
+#passwd
+DB_PASS: 123qwe
+KEYSTONE_DBPASS: 123qwe
+ADMIN_PASS: 123qwe
+DEMO_PASS: 123qwe
+GLANCE_DBPASS: 123qwe
+NOVA_DBPASS: 123qwe
+RABBIT_PASS: 123qwe
+PLACEMENT_PASS: 123qwe
+NEUTRON_PASS: 123qwe
+METADATA_SECRET: 123qwe
+PCS_PASS: 123qwe
+MANILA_PASS: 123qwe
+
+MAJOR_HOSTNAME: controller
+STANDBY_HOSTNAME: standby
+CONTROLLER_VIP: 172.16.5.130
+CONTROLLER_VIP_PREFIX: 16
+
+
+list_data1:
+- name: dashboard_cluster
+  port: 80
+- name: keystone_admin_cluster
+  port: 35357
+- name: keystone_public_internal_cluster
+  port: 5000
+- name: nova_compute_api_cluster
+  port: 8774
+- name: nova_metadata_api_cluster
+  port: 8775
+- name: cinder_api_cluster
+  port: 8776
+- name: neutron_api_cluster
+  port: 9696
+list_data2:
+- name: glance_api_cluster
+  port: 9292
+list_data3:
+- name: nova_placement_api_cluster
+  port: 8778
+- name: nova_spicehtml5proxy_cluster
+  port: 6082
+list_data4:
+- name: glance_registry_cluster
+  port: 9191

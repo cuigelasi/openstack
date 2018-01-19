@@ -1,0 +1,70 @@
+---
+
+- name: 创建openstack相关数据库
+  shell: mysql -uroot -p{{DB_PASS}} -e "CREATE DATABASE keystone;";
+         mysql -uroot -p{{DB_PASS}} -e "CREATE DATABASE glance;";
+         mysql -uroot -p{{DB_PASS}} -e "CREATE DATABASE nova_api;";
+         mysql -uroot -p{{DB_PASS}} -e "CREATE DATABASE nova;";
+         mysql -uroot -p{{DB_PASS}} -e "CREATE DATABASE nova_cell0;";
+         mysql -uroot -p{{DB_PASS}} -e "CREATE DATABASE neutron;";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'{{MAJOR_IP}}' IDENTIFIED BY '{{KEYSTONE_DBPASS}}';";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'%' IDENTIFIED BY '{{KEYSTONE_DBPASS}}';";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON glance.* TO 'glance'@'{{MAJOR_IP}}' IDENTIFIED BY '{{GLANCE_DBPASS}}';";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON glance.* TO 'glance'@'%' IDENTIFIED BY '{{GLANCE_DBPASS}}';";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON nova_api.* TO 'nova'@'{{MAJOR_IP}}' IDENTIFIED BY '{{NOVA_DBPASS}}';";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON nova_api.* TO 'nova'@'%' IDENTIFIED BY '{{NOVA_DBPASS}}';";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON nova.* TO 'nova'@'{{MAJOR_IP}}' IDENTIFIED BY '{{NOVA_DBPASS}}';";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON nova.* TO 'nova'@'%' IDENTIFIED BY '{{NOVA_DBPASS}}';";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON nova_cell0.* TO 'nova'@'{{MAJOR_IP}}' IDENTIFIED BY '{{NOVA_DBPASS}}';";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON nova_cell0.* TO 'nova'@'%' IDENTIFIED BY '{{NOVA_DBPASS}}';";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON neutron.* TO 'neutron'@'{{MAJOR_IP}}' IDENTIFIED BY '{{NEUTRON_PASS}}';";
+         mysql -uroot -p{{DB_PASS}} -e "GRANT ALL PRIVILEGES ON neutron.* TO 'neutron'@'%' IDENTIFIED BY '{{NEUTRON_PASS}}';"
+- name: 安装并配置keystone
+  shell: crudini --set /etc/keystone/keystone.conf database connection "mysql+pymysql://keystone:{{KEYSTONE_DBPASS}}@{{MAJOR_IP}}/keystone";
+         crudini --set /etc/keystone/keystone.conf database slave_connection "mysql+pymysql://keystone:{{KEYSTONE_DBPASS}}@{{STANDBY_IP}}/keystone";
+         crudini --set /etc/keystone/keystone.conf token provider fernet;
+         crudini --set /etc/keystone/keystone.conf DEFAULT bind_host {{MAJOR_IP}};
+         su -s /bin/sh -c "keystone-manage db_sync" keystone;
+         keystone-manage fernet_setup --keystone-user keystone --keystone-group keystone;
+         keystone-manage credential_setup --keystone-user keystone --keystone-group keystone
+- name: 复制fernet-keys到备用节点
+  shell: scp -r /etc/keystone/fernet-keys {{STANDBY_IP}}:/etc/keystone/;
+- name: 配置Apache HTTP
+  shell: sed -i "s/^Listen.*/Listen {{MAJOR_IP}}:80/" /etc/httpd/conf/httpd.conf;
+         echo "ServerName {{MAJOR_IP}}" >> /etc/httpd/conf/httpd.conf;
+         sed -i "s/^Listen 5000/Listen {{MAJOR_IP}}:5000/" /usr/share/keystone/wsgi-keystone.conf;
+         sed -i "s/^Listen 35357/Listen {{MAJOR_IP}}:35357/" /usr/share/keystone/wsgi-keystone.conf;
+         ln -s /usr/share/keystone/wsgi-keystone.conf /etc/httpd/conf.d/
+- name: 修改http配置
+  shell: sed -i '/<\/VirtualHost>/i\  <Directory />' /etc/httpd/conf.d/00-nova-placement-api.conf;
+         sed -i '/<\/VirtualHost>/i\    Options All' /etc/httpd/conf.d/00-nova-placement-api.conf;
+         sed -i '/<\/VirtualHost>/i\    AllowOverride All' /etc/httpd/conf.d/00-nova-placement-api.conf;
+         sed -i '/<\/VirtualHost>/i\    Require all granted' /etc/httpd/conf.d/00-nova-placement-api.conf;
+         sed -i '/<\/VirtualHost>/i\  </Directory>' /etc/httpd/conf.d/00-nova-placement-api.conf;
+         sed -i '/<\/VirtualHost>/i\  <Directory /usr/bin/nova-placement-api>' /etc/httpd/conf.d/00-nova-placement-api.conf;
+         sed -i '/<\/VirtualHost>/i\    Options All' /etc/httpd/conf.d/00-nova-placement-api.conf;
+         sed -i '/<\/VirtualHost>/i\    AllowOverride All' /etc/httpd/conf.d/00-nova-placement-api.conf;
+         sed -i '/<\/VirtualHost>/i\    Require all granted' /etc/httpd/conf.d/00-nova-placement-api.conf;
+         sed -i '/<\/VirtualHost>/i\  </Directory>' /etc/httpd/conf.d/00-nova-placement-api.conf;
+         sed -i "s/^Listen 8778/Listen {{MAJOR_IP}}:8778/" /etc/httpd/conf.d/00-nova-placement-api.conf
+- name: 设置开机启动
+  shell: systemctl enable httpd.service;
+         systemctl restart httpd.service
+- name: 复制keystone.sh
+  copy: src="{{ocata_sh}}/key.sh" dest="/root/key.sh"
+- name: 修改key.sh
+  shell: sed -i 's/$controller_ip/{{CONTROLLER_VIP}}/g' /root/key.sh;
+         sed -i 's/$ADMIN_PASS/{{ADMIN_PASS}}/g' /root/key.sh;
+         sed -i 's/$DEMO_PASS/{{DEMO_PASS}}/' /root/key.sh
+- name: 创建域、项目、用户、角色
+  shell: sh /root/key.sh;
+- name: 复制admin-openrc.sh
+  copy: src="{{ocata_sh}}/admin-openrc.sh" dest="/home/"
+- name: 修改admin-openrc.sh
+  shell: sed -i 's/controller/{{CONTROLLER_VIP}}/' /home/admin-openrc.sh;
+         sed -i 's/ADMIN_PASS/{{ADMIN_PASS}}/' /home/admin-openrc.sh
+- name: 复制demo-openrc.sh
+  copy: src="{{ocata_sh}}/demo-openrc.sh" dest="/home/"
+- name: 修改demo-openrc.sh
+  shell: sed -i 's/controller/{{CONTROLLER_VIP}}/' /home/demo-openrc.sh;
+         sed -i 's/DEMO_PASS/{{DEMO_PASS}}/' /home/demo-openrc.sh

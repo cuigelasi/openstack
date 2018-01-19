@@ -1,0 +1,45 @@
+---
+
+- hosts: ocata
+  tasks:
+  - name: 安装chrony
+    shell: yum -y install chrony
+  - name: 检查网络是否畅通
+    shell: ping -c 3 time1.aliyun.com
+  - name: 同步时间
+    shell: ntpdate time1.aliyun.com;
+           hwclock -w
+
+- hosts: ocata_controller
+  vars_files:
+  - /root/ha_ocata/group_vars/all
+  tasks:
+  - name: 复制chronyd配置文件
+    copy: src="{{ocata_conf}}/chrony.conf" dest="/etc/chrony.conf"
+
+- hosts: ocata_standby
+  vars_files:
+  - /root/ha_ocata/group_vars/all
+  tasks:
+  - name:
+    copy: src="{{ocata_conf}}/chrony.conf" dest="/etc/chrony.conf"
+  - name: 同步时间
+    shell: echo "server controller iburst" >> /etc/chrony.conf
+
+
+- hosts: ocata_compute
+  vars_files:
+  - /root/ha_ocata/group_vars/all
+  tasks:
+  - name: 复制chronyd配置文件
+    copy: src="{{ocata_conf}}/chrony.conf" dest="/etc/chrony.conf"
+  - name: 同步时间
+    shell: echo "server controller iburst" >> /etc/chrony.conf;
+           echo "server standby iburst" >> /etc/chrony.conf
+
+- hosts: ocata
+  tasks:
+  - name: 开启chronyd服务，并设为开机启动
+    shell: systemctl enable chronyd.service;
+           systemctl restart chronyd.service
+

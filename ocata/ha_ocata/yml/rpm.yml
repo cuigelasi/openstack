@@ -1,0 +1,33 @@
+---
+
+- hosts: controller_standby
+  tasks:
+  - name: 安装主备控制节点的包
+    shell: yum -y install chrony crudini;
+           yum -y install pacemaker pcs corosync fence-agents resource-agents xinetd;
+           yum -y install haproxy;
+           yum -y upgrade;
+           yum -y install python-openstackclient;
+           yum -y install openstack-selinux;
+           yum -y install mariadb mariadb-server python2-PyMySQL expect;
+           yum -y install rabbitmq-server;
+           yum -y install memcached python-memcached;
+           yum -y install openstack-keystone httpd mod_wsgi;
+           yum -y install openstack-glance;
+           yum -y install openstack-nova-api openstack-nova-conductor openstack-nova-console openstack-nova-scheduler openstack-nova-placement-api;
+           yum -y install spice-html5 openstack-nova-spicehtml5proxy spice-server;
+           yum -y install openstack-neutron openstack-neutron-ml2 openstack-neutron-linuxbridge ebtables;
+           yum -y install openstack-dashboard;
+           yum -y install openstack-manila python-manilaclient         
+ 
+- hosts: ocata_compute
+  tasks:
+  - name: 计算节点需要安装的包
+    shell: yum -y install chrony crudini;
+           yum -y upgrade;
+           yum -y install python-openstackclient;
+           yum -y install openstack-selinux;
+           yum -y install openstack-nova-compute spice-html5 spice-server;
+           yum -y install openstack-neutron-linuxbridge ebtables ipset;
+           yum install openstack-manila-share python2-PyMySQL;
+           yum install lvm2 nfs-utils nfs4-acl-tools portmap;
